@@ -5,6 +5,8 @@ import math
 import numpy as np
 import torch
 import torch.nn as nn
+import soundfile as sf
+import torchaudio
 
 
 def stft(y, n_fft, hop_length, win_length):
@@ -115,7 +117,52 @@ def load_wav(file, sr=16000):
     if len(file) == 2:
         return file[-1]
     else:
-        return librosa.load(os.path.abspath(os.path.expanduser(file)), mono=False, sr=sr)[0]
+        sig = librosa.load(os.path.abspath(os.path.expanduser(file)), mono=False, sr=sr)[0]
+        #print (sig.shape)
+        if sig.ndim > 1:
+                sig_idx = np.random.randint(0, sig.shape[0])
+                sig = sig[sig_idx, :]
+        #print (sig.shape)
+        return sig
+
+def _get_sample(path, resample=None, pitch_shift = 0):
+    if pitch_shift == 0:
+        effects = [
+            ["remix", "1"]
+        ]
+    else:
+        effects = [
+            ["remix", "1"],
+            ['pitch', str(int (pitch_shift))]
+        ]
+    #effects = [[]]
+    if resample:
+        effects.append(["rate", f'{resample}'])
+    return torchaudio.sox_effects.apply_effects_file(path, effects=effects)
+
+def load_wav_torch_to_np(snd_path, sr=None):
+    snd = np.transpose(np.array(load_wav_torch(snd_path, resample=sr)[0][0,:]))
+    return snd
+
+def load_wav_torch(snd_path, resample=None, processed=False, pitch_shift = 0):
+    
+    # print ("RIR SAMPLE")
+    snd_raw, sample_rate = _get_sample(snd_path, resample=resample, pitch_shift = pitch_shift)
+    # print (rir_raw.shape)
+    if not processed:
+        return snd_raw, sample_rate
+    # print(rir_raw.shape)
+    snd = snd_raw # [:, int(sample_rate*1.01):int(sample_rate*1.3)]
+    snd = snd / torch.norm(snd, p=2)
+    snd = torch.flip(snd, [1])
+    # print (rir.shape)
+    return snd, sample_rate
+
+def save_wav(file, sig, sr=16000, verbose=False):
+    sf.write(file, sig, sr, subtype='PCM_16')
+    if verbose:
+        print ("saved file: ", file)
+    return
 
 
 def aligned_subsample(data_a, data_b, sub_sample_length):
@@ -170,6 +217,25 @@ def subsample(data, sub_sample_length, start_position: int = -1, return_start_po
         pass
 
     assert len(data) == sub_sample_length
+
+    if return_start_position:
+        return data, start_position
+    else:
+        return data
+
+def subsample_audio_tensor(data, sub_sample_length, start_position: int = -1, return_start_position=False):
+    assert len (data.shape) == 2, f"Only support 2D data. The dim is {np.ndim(data)}"
+    length = data.shape[1]
+    # print (length, sub_sample_length)
+    if length > sub_sample_length:
+        if start_position < 0:
+            start_position = np.random.randint(length - sub_sample_length)
+        end = start_position + sub_sample_length
+        data = data[:, start_position:end]
+    else:
+        data = torch.nn.functional.pad(data, (int(np.floor(sub_sample_length))-data.shape[1],0))
+        # TODO could be implemented
+        #assert False
 
     if return_start_position:
         return data, start_position

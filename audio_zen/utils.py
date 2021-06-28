@@ -3,6 +3,8 @@ import os
 import time
 from copy import deepcopy
 from functools import reduce
+from pathlib import Path
+import numpy as np
 
 import torch
 
@@ -18,6 +20,21 @@ def load_checkpoint(checkpoint_path, device):
     else:  # load tar
         print(f"Loading {checkpoint_path}, epoch = {model_checkpoint['epoch']}.")
         return model_checkpoint["l1"]
+
+
+def sample_fixed_length_data_aligned(data_a, data_b, sample_length):
+    """sample with fixed length from two dataset
+    """
+    assert len(data_a) == len(data_b), "Inconsistent dataset length, unable to sampling"
+    assert len(data_a) >= sample_length, f"len(data_a) is {len(data_a)}, sample_length is {sample_length}."
+
+    frames_total = len(data_a)
+
+    start = np.random.randint(frames_total - sample_length + 1)
+    # print(f"Random crop from: {start}")
+    end = start + sample_length
+
+    return data_a[start:end], data_b[start:end]
 
 
 def prepare_empty_dir(dirs, resume=False):
@@ -213,3 +230,7 @@ def expand_path(path):
 def basename(path):
     filename, ext = os.path.splitext(os.path.basename(path))
     return filename, ext
+
+def find_parallel_data(path, parallel_dir_name):
+    path = Path(path)
+    return path.parents[1] / parallel_dir_name / path.parts[-1]

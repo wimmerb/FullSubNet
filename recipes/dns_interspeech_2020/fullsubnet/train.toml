@@ -1,5 +1,5 @@
 [meta]
-save_dir = "/apdcephfs/share_976139/xianghao/Experiments_share_976139/FullSubNet/FullSubNet"
+save_dir = "../../FullSubNet"
 description = "This is a description of FullSubNet experiment."
 seed = 0  # set random seed for random, numpy, pytorch-gpu and pytorch-cpu
 keep_reproducibility = false  # see https://pytorch.org/docs/stable/notes/randomness.html
@@ -27,10 +27,10 @@ beta2 = 0.999
 [train_dataset]
 path = "dataset_train.Dataset"
 [train_dataset.args]
-clean_dataset = "/apdcephfs/share_976139/xianghao/Datasets_share_976139/DNS-INTERSPEECH-2020/datasets/clean_0.6.txt"
+clean_dataset = "clean_TRAIN.txt"
 clean_dataset_limit = false
 clean_dataset_offset = 0
-noise_dataset = "/apdcephfs/share_976139/xianghao/Datasets_share_976139/DNS-INTERSPEECH-2020/datasets/noise.txt"
+noise_dataset = "noise_TRAIN.txt"
 noise_dataset_limit = false
 noise_dataset_offset = 0
 num_workers = 36
@@ -38,19 +38,20 @@ pre_load_clean_dataset = false
 pre_load_noise = false
 pre_load_rir = false
 reverb_proportion = 0.75
-rir_dataset = "/apdcephfs/share_976139/xianghao/Datasets_share_976139/DNS-INTERSPEECH-2020/datasets/rir.txt"
+rir_dataset = "rir_TRAIN.txt"
 rir_dataset_limit = false
 rir_dataset_offset = 0
 silence_length = 0.2
-snr_range = [-5, 20]
+snr_range = [-3, 20]
 sr = 16000
 sub_sample_length = 3.072
 target_dB_FS = -25
 target_dB_FS_floating_value = 10
+num_trainfile_examples = 2
 
 
 [train_dataset.dataloader]
-batch_size = 38
+batch_size = 16
 num_workers = 12
 drop_last = true
 pin_memory = true
@@ -58,12 +59,11 @@ shuffle = true
 
 
 [validation_dataset]
-path = "dataset_validation.Dataset"
+path = "dataset_validation_SE.Dataset"
 
 [validation_dataset.args]
 dataset_dir_list = [
-    "/apdcephfs/share_976139/xianghao/Datasets_share_976139/DNS-INTERSPEECH-2020/datasets/test_set/synthetic/with_reverb/",
-    "/apdcephfs/share_976139/xianghao/Datasets_share_976139/DNS-INTERSPEECH-2020/datasets/test_set/synthetic/no_reverb/"
+    "/home/benedikt/thesis/datasets/VALIDATION_SETS/VALIDATION_SET_1"
 ]
 sr = 16000
 

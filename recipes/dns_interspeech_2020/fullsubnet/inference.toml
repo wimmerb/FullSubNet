@@ -1,3 +1,11 @@
+#python inference.py \
+#  -C fullsubnet/inference.toml \
+#  -M /path/to/your/checkpoint_dir/best_model.tar \
+#  -O /path/to/your/enhancement/dir
+
+# run inference with 
+# CUDA_VISIBLE_DEVICES=0 python inference.py -C fullsubnet/inference.toml -M /home/benedikt/thesis/repos/FullSubNet/FullSubNet_TRY_14_06_21_DENOISE/train_16k_buf/checkpoints/best_model.tar -O ~/Experiments/FullSubNet/Denoise_21_06_14/inference
+
 [acoustics]
 sr = 16000
 n_fft = 512
@@ -13,16 +21,25 @@ type = "full_band_crm_mask"
 n_neighbor = 15
 
 
+#[dataset]
+#path = "dataset_inference.Dataset"
+
+#[dataset.args]
+#dataset_dir_list = [
+    #"/home/benedikt/thesis/datasets/VSED/noisy_reverb_nb/m8"
+    #"enhancement/noisy"
+#    /home/benedikt/thesis/TRAIN_EVALUATION_DATA/TROMPA_REHEARSALS/
+#]
+#sr = 16000
+
 [dataset]
-path = "dataset_inference.Dataset"
-
+path = "audio_zen.dataset.waveform_dataset_enhancement.WaveformDataset"
 [dataset.args]
-dataset_dir_list = [
-    #    "/apdcephfs/share_976139/xianghao/Datasets_share_976139/DNS-INTERSPEECH-2020/datasets/test_set/synthetic/with_reverb/noisy",
-    "/apdcephfs/share_976139/xianghao/Datasets_share_976139/DNS-INTERSPEECH-2020/datasets/test_set/synthetic/no_reverb/noisy"
-]
+dataset = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/TROMPA_REHEARSALS/all_recordings.txt"
+limit = 40
+offset = 40
 sr = 16000
-
+sample_for_wave_u_net = false
 
 [model]
 path = "fullsubnet.model.Model"

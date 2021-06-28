@@ -22,10 +22,18 @@ class Trainer(BaseTrainer):
         progress_bar = None
 
         if self.rank == 0:
+            #print (len (self.train_dataloader))
             progress_bar = tqdm(total=len(self.train_dataloader), desc=f"Training")
+        
+        #i = 0
 
         for noisy, clean in self.train_dataloader:
+            #if i != 0:
+            #    break
+            #i = 1
             self.optimizer.zero_grad()
+            # print ("NEW BATCH")
+            # print (noisy.shape)
 
             noisy = noisy.to(self.rank)
             clean = clean.to(self.rank)

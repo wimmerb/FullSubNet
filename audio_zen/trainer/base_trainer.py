@@ -24,6 +24,11 @@ plt.switch_backend('agg')
 
 class BaseTrainer:
     def __init__(self, dist, rank, config, resume, only_validation, model, loss_function, optimizer):
+
+        # assert config["validation_dataset"]["args"]["target_task"] == config["validation_dataset"]["args"]["target_task"], "Configuration target tasks diverging for validation and training"
+
+        self.config = config
+
         self.color_tool = colorful
         self.color_tool.use_style("solarized")
 
@@ -184,9 +189,8 @@ class BaseTrainer:
         # New checkpoint will overwrite the older one.
         torch.save(state_dict, (self.checkpoints_dir / "latest_model.tar").as_posix())
 
-        # "model_{epoch_number}.pth"
-        # Contains only model.
-        torch.save(state_dict["model"], (self.checkpoints_dir / f"model_{str(epoch).zfill(4)}.pth").as_posix())
+        
+        
 
         # If the model get a best metric score (means "is_best_epoch=True") in the current epoch,
         # the model checkpoint will be saved as "best_model.tar"
@@ -194,6 +198,11 @@ class BaseTrainer:
         if is_best_epoch:
             print(self.color_tool.red(f"\t Found a best score in the {epoch} epoch, saving..."))
             torch.save(state_dict, (self.checkpoints_dir / "best_model.tar").as_posix())
+            torch.save(state_dict["model"], (self.checkpoints_dir / f"model_{str(epoch).zfill(4)}_peaked.pth").as_posix())
+        else:
+            # "model_{epoch_number}.pth"
+            # Contains only model.
+            torch.save(state_dict["model"], (self.checkpoints_dir / f"model_{str(epoch).zfill(4)}.pth").as_posix())
 
     def _is_best_epoch(self, score, save_max_metric_score=True):
         """
@@ -301,6 +310,11 @@ class BaseTrainer:
             # inference + calculating metrics + saving checkpoints
             if self.only_validation and self.rank == 0:
                 self._set_models_to_eval_mode()
+                
+                print(self.color_tool.red("Always check that your validation set target matches your training set target!"))
+                print(self.color_tool.red("target task: \t" + str(self.config["train_dataset"]["args"]["target_task"])))
+                print(self.color_tool.red("validation set paths: \t" + str(self.config["validation_dataset"]["args"]["dataset_dir_list"])))
+                
                 metric_score = self._validation_epoch(epoch)
 
                 if self._is_best_epoch(metric_score, save_max_metric_score=self.save_max_metric_score):

@@ -17,6 +17,9 @@ from audio_zen.utils import initialize_module
 
 
 def entry(rank, world_size, config, resume, only_validation):
+    print ("RANK", rank)
+    print ("WORLD SIZE", world_size)
+
     torch.manual_seed(config["meta"]["seed"])  # For both CPU and GPU
     np.random.seed(config["meta"]["seed"])
     random.seed(config["meta"]["seed"])
@@ -38,7 +41,7 @@ def entry(rank, world_size, config, resume, only_validation):
 
     valid_dataloader = DataLoader(
         dataset=initialize_module(config["validation_dataset"]["path"], args=config["validation_dataset"]["args"]),
-        num_workers=0,
+        num_workers=1, #TODO was set to 0?
         batch_size=1
     )
 

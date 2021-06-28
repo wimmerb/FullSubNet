@@ -1,3 +1,6 @@
+*.DS_Store
+# wave files
+*.wav
 # code editor
 .vscode
 .idea

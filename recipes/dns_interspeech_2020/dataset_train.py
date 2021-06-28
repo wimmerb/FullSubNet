@@ -6,7 +6,7 @@ from scipy import signal
 from tqdm import tqdm
 
 from audio_zen.dataset.base_dataset import BaseDataset
-from audio_zen.acoustics.feature import norm_amplitude, tailor_dB_FS, is_clipped, load_wav, subsample
+from audio_zen.acoustics.feature import norm_amplitude, tailor_dB_FS, is_clipped, load_wav, save_wav, subsample
 from audio_zen.utils import expand_path
 
 
@@ -31,7 +31,8 @@ class Dataset(BaseDataset):
                  pre_load_clean_dataset,
                  pre_load_noise,
                  pre_load_rir,
-                 num_workers
+                 num_workers,
+                 num_trainfile_examples
                  ):
         """
         Dynamic mixing for training
@@ -52,6 +53,9 @@ class Dataset(BaseDataset):
             sr:
         """
         super().__init__()
+        # debug args
+        self.num_trainfile_examples = num_trainfile_examples
+
         # acoustics args
         self.sr = sr
 
@@ -90,13 +94,14 @@ class Dataset(BaseDataset):
         self.sub_sample_length = sub_sample_length
 
         self.length = len(self.clean_dataset_list)
+        print ("length of clean data:", self.length)
 
     def __len__(self):
         return self.length
 
     def _preload_dataset(self, file_path_list, remark=""):
         waveform_list = Parallel(n_jobs=self.num_workers)(
-            delayed(load_wav)(f_path) for f_path in tqdm(file_path_list, desc=remark)
+            delayed(load_wav)(f_path, self.sr) for f_path in tqdm(file_path_list, desc=remark)
         )
         return list(zip(file_path_list, waveform_list))
 
@@ -115,6 +120,7 @@ class Dataset(BaseDataset):
             noise_y = np.append(noise_y, noise_new_added)
             remaining_length -= len(noise_new_added)
 
+            # Adding silence between snippets of noise
             # 如果还需要添加新的噪声，就插入一个小静音段
             if remaining_length > 0:
                 silence_len = min(remaining_length, len(silence))
@@ -128,7 +134,7 @@ class Dataset(BaseDataset):
         return noise_y
 
     @staticmethod
-    def snr_mix(clean_y, noise_y, snr, target_dB_FS, target_dB_FS_floating_value, rir=None, eps=1e-6):
+    def snr_mix(clean_y, noise_y, snr, target_dB_FS, target_dB_FS_floating_value, rir=None, eps=1e-6, num_trainfile_examples=10, sr=16000):
         """
         混合噪声与纯净语音，当 rir 参数不为空时，对纯净语音施加混响效果
 
@@ -149,19 +155,32 @@ class Dataset(BaseDataset):
                 rir_idx = np.random.randint(0, rir.shape[0])
                 rir = rir[rir_idx, :]
 
-            clean_y = signal.fftconvolve(clean_y, rir)[:len(clean_y)]
+            #clean_y = signal.fftconvolve(clean_y, rir)[:len(clean_y)]
+            clean_y_reverberant = signal.fftconvolve(clean_y, rir)[:len(clean_y)]
+        else:
+            clean_y_reverberant = clean_y
 
         clean_y, _ = norm_amplitude(clean_y)
         clean_y, _, _ = tailor_dB_FS(clean_y, target_dB_FS)
         clean_rms = (clean_y ** 2).mean() ** 0.5
 
+        clean_y_reverberant, _ = norm_amplitude(clean_y_reverberant)
+        clean_y_reverberant, _, _ = tailor_dB_FS(clean_y_reverberant, target_dB_FS)
+        clean_reverberant_rms = (clean_y_reverberant ** 2).mean() ** 0.5
+
+        # if(rir is not None):
+        #     print (clean_rms, clean_reverberant_rms)
+        #     save_wav(f"reverberant_{num_trainfile_examples}.wav", clean_y_reverberant, sr)
+        #     save_wav(f"clean_{num_trainfile_examples}.wav", clean_y, sr)
+
         noise_y, _ = norm_amplitude(noise_y)
         noise_y, _, _ = tailor_dB_FS(noise_y, target_dB_FS)
         noise_rms = (noise_y ** 2).mean() ** 0.5
 
-        snr_scalar = clean_rms / (10 ** (snr / 20)) / (noise_rms + eps)
+        snr_scalar = clean_reverberant_rms / (10 ** (snr / 20)) / (noise_rms + eps)
+        #snr_scalar = clean_rms / (10 ** (snr / 20)) / (noise_rms + eps)
         noise_y *= snr_scalar
-        noisy_y = clean_y + noise_y
+        noisy_y = clean_y_reverberant + noise_y
 
         # Randomly select RMS value of dBFS between -15 dBFS and -35 dBFS and normalize noisy speech with that value
         noisy_target_dB_FS = np.random.randint(
@@ -179,6 +198,10 @@ class Dataset(BaseDataset):
             noisy_y_scalar = np.max(np.abs(noisy_y)) / (0.99 - eps)  # 相当于除以 1
             noisy_y = noisy_y / noisy_y_scalar
             clean_y = clean_y / noisy_y_scalar
+
+        if num_trainfile_examples > 0:
+            save_wav(f"noisy_{num_trainfile_examples}{'_rev' if rir is not None else ''}.wav", noisy_y, sr)
+            save_wav(f"clean_{num_trainfile_examples}{'_rev' if rir is not None else ''}.wav", clean_y, sr)
 
         return noisy_y, clean_y
 
@@ -199,8 +222,11 @@ class Dataset(BaseDataset):
             snr=snr,
             target_dB_FS=self.target_dB_FS,
             target_dB_FS_floating_value=self.target_dB_FS_floating_value,
-            rir=load_wav(self._random_select_from(self.rir_dataset_list), sr=self.sr) if use_reverb else None
+            rir=load_wav(self._random_select_from(self.rir_dataset_list), sr=self.sr) if use_reverb else None,
+            num_trainfile_examples=self.num_trainfile_examples,
+            sr=self.sr
         )
+        self.num_trainfile_examples-=1
 
         noisy_y = noisy_y.astype(np.float32)
         clean_y = clean_y.astype(np.float32)
