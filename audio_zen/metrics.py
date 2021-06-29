@@ -90,12 +90,19 @@ def STOI(ref, est, sr=16000):
 
 
 def WB_PESQ(ref, est, sr=16000):
-    return pesq(sr, ref, est, "wb")
+    try:
+        return pesq(sr, ref, est, "wb")
+    except Exception as e:
+        print (e, "returning None")
+        return None
 
 
 def NB_PESQ(ref, est, sr=16000):
-    return nb_pesq(ref, est, sr)
-
+    try:
+        return nb_pesq(ref, est, sr)
+    except Exception as e:
+        print (e, "returning None")
+        return None
 
 # Only registered metric can be used.
 REGISTERED_METRICS = {

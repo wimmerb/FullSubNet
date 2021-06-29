@@ -43,7 +43,7 @@ class Dataset(BaseDataset):
 
         self.sample_for_wave_u_net = sample_for_wave_u_net
         #self.sample_length=sample_length
-        self.sample_length = int(np.floor(sub_sample_length * self.sr))
+        self.sample_length = int(np.floor(sub_sample_length * self.sr)) # this is only used for wave_u_net
 
     def __len__(self):
         return self.length
@@ -64,7 +64,7 @@ class Dataset(BaseDataset):
 
         reverb_remark = ""
 
-        speech_type = "noisy"
+        speech_type = "all"
 
         clean_file_path = find_parallel_data (noisy_file_path, "clean")
 

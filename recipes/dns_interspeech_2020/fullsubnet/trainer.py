@@ -80,18 +80,25 @@ class Trainer(BaseTrainer):
         visualization_metrics = self.visualization_config["metrics"]
 
         loss_total = 0.0
-        loss_list = {"With_reverb": 0.0, "No_reverb": 0.0, }
-        item_idx_list = {"With_reverb": 0, "No_reverb": 0, }
-        noisy_y_list = {"With_reverb": [], "No_reverb": [], }
-        clean_y_list = {"With_reverb": [], "No_reverb": [], }
-        enhanced_y_list = {"With_reverb": [], "No_reverb": [], }
-        validation_score_list = {"With_reverb": 0.0, "No_reverb": 0.0}
+        loss_list = {"all": 0.0}
+        item_idx_list = {"all": 0.0}
+        noisy_y_list = {"all": []}
+        clean_y_list = {"all": []}
+        enhanced_y_list = {"all": []}
+        validation_score_list = {"all": 0.0}
 
         # speech_type in ("with_reverb", "no_reverb")
         for i, (noisy, clean, name, speech_type) in enumerate(self.valid_dataloader):
             assert len(name) == 1, "The batch size for the validation stage must be one."
             name = name[0]
             speech_type = speech_type[0]
+
+            #print (noisy.shape, clean.shape)
+            
+            # with torch.no_grad():
+            #     print(torch.sum(torch.abs(clean)))
+
+            #print(speech_type)
 
             noisy = noisy.to(self.rank)
             clean = clean.to(self.rank)
@@ -138,7 +145,7 @@ class Trainer(BaseTrainer):
 
         self.writer.add_scalar(f"Loss/Validation_Total", loss_total / len(self.valid_dataloader), epoch)
 
-        for speech_type in ("With_reverb", "No_reverb"):
+        for speech_type in ["all"]:
             self.writer.add_scalar(f"Loss/{speech_type}", loss_list[speech_type] / len(self.valid_dataloader), epoch)
 
             validation_score_list[speech_type] = self.metrics_visualization(
@@ -146,4 +153,4 @@ class Trainer(BaseTrainer):
                 visualization_metrics, epoch, visualization_num_workers, mark=speech_type
             )
 
-        return validation_score_list["No_reverb"]
+        return validation_score_list["all"]

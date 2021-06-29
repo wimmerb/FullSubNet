@@ -69,6 +69,7 @@ class BaseTrainer:
         self.validation_config = config["trainer"]["validation"]
         self.validation_interval = self.validation_config["validation_interval"]
         self.save_max_metric_score = self.validation_config["save_max_metric_score"]
+        self.validation_used_metric = self.validation_config.get("used_metric", None)
         assert self.validation_interval >= 1, "Check the 'validation_interval' parameter in the config. It should be large than one."
 
         # Trainer.visualization in the config
@@ -268,7 +269,9 @@ class BaseTrainer:
              used for checking if the current epoch is a "best epoch."
             2. If you want to use a new metric, you must register it in "util.metrics" file.
         """
-        assert "STOI" in metrics_list and "WB_PESQ" in metrics_list, "'STOI' and 'WB_PESQ' must be existence."
+
+        if self.validation_used_metric == None:
+            assert "STOI" in metrics_list and "WB_PESQ" in metrics_list, "'STOI' and 'WB_PESQ' must be existence."
 
         # Check if the metric is registered in "util.metrics" file.
         for i in metrics_list:
@@ -280,9 +283,13 @@ class BaseTrainer:
             score_on_noisy = Parallel(n_jobs=num_workers)(
                 delayed(metrics.REGISTERED_METRICS[metric_name])(ref, est) for ref, est in zip(clean_list, noisy_list)
             )
+            
             score_on_enhanced = Parallel(n_jobs=num_workers)(
                 delayed(metrics.REGISTERED_METRICS[metric_name])(ref, est) for ref, est in zip(clean_list, enhanced_list)
             )
+            score_on_noisy = [x for x in score_on_noisy if x != None and str(x) != 'nan']
+            score_on_enhanced = [x for x in score_on_enhanced if x != None and str(x) != 'nan']
+
 
             # Add the mean value of the metric to tensorboard
             mean_score_on_noisy = np.mean(score_on_noisy)
@@ -294,11 +301,26 @@ class BaseTrainer:
 
             if metric_name == "STOI":
                 stoi_mean = mean_score_on_enhanced
+            if metric_name == "SI_SDR":
+                si_sdr_mean = mean_score_on_enhanced
+                # print ("§§§§§§§§§§§§")
+                # print (score_on_enhanced)
+                # print (mean_score_on_enhanced)
+                # print ("§§§§§§§§§§§§")
 
             if metric_name == "WB_PESQ":
                 wb_pesq_mean = transform_pesq_range(mean_score_on_enhanced)
-
-        return (stoi_mean + wb_pesq_mean) / 2
+        
+        metric_output = None
+        if self.validation_used_metric == None:
+            metric_output = (stoi_mean + wb_pesq_mean) / 2
+        elif self.validation_used_metric == "SI_SDR":
+            metric_output = si_sdr_mean
+        else:
+            assert False
+        
+        print ("Score of validation is:", metric_output, f"({str(self.validation_used_metric)})")
+        return metric_output
 
     def train(self):
         for epoch in range(self.start_epoch, self.epochs + 1):

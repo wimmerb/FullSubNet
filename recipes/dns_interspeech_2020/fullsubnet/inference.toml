@@ -5,6 +5,7 @@
 
 # run inference with 
 # CUDA_VISIBLE_DEVICES=0 python inference.py -C fullsubnet/inference.toml -M /home/benedikt/thesis/repos/FullSubNet/FullSubNet_TRY_14_06_21_DENOISE/train_16k_buf/checkpoints/best_model.tar -O ~/Experiments/FullSubNet/Denoise_21_06_14/inference
+# CUDA_VISIBLE_DEVICES="" python inference.py -C fullsubnet/inference.toml -M /home/benedikt/Experiments/FullSubNet/Dereverb_21_06_28/train_16k_buf/checkpoints/best_model.tar -O /home/benedikt/Experiments/FullSubNet/Dereverb_21_06_28/inference
 
 [acoustics]
 sr = 16000
