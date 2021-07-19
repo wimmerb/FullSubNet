@@ -29,8 +29,8 @@ class SequenceModel(nn.Module):
         # Sequence layer
         if sequence_model == "LSTM":
             self.sequence_model = nn.LSTM(
-                input_size=input_size,
-                hidden_size=hidden_size,
+                input_size=input_size,   #num_freqs
+                hidden_size=hidden_size, 
                 num_layers=num_layers,
                 batch_first=True,
                 bidirectional=bidirectional,
@@ -48,7 +48,7 @@ class SequenceModel(nn.Module):
 
         # Fully connected layer
         if bidirectional:
-            self.fc_output_layer = nn.Linear(hidden_size * 2, output_size)
+            self.fc_output_layer = nn.Linear(hidden_size * 2, output_size) #output_size == num_freqs*2
         else:
             self.fc_output_layer = nn.Linear(hidden_size, output_size)
 

@@ -234,3 +234,76 @@ def basename(path):
 def find_parallel_data(path, parallel_dir_name):
     path = Path(path)
     return path.parents[1] / parallel_dir_name / path.parts[-1]
+
+
+
+
+voice_type_aliases = {
+    "soprano": ["soprano", "sopran", "soprani", "sopranos", "soprans", "s", "sop"],
+    "alto": ["alto", 
+             "alt", 
+             "altos", 
+             "contralto", 
+             "contralt", 
+             "contralts", 
+             "contralti", 
+             "mezzo", 
+             "a", 
+             "c", 
+             "mezzo-soprano", 
+             "altus"
+            ],
+    "tenor": ["tenor", "tenors", "tenori", "ten", "t"],
+    "bass": [
+        "bass",
+        "bas",
+        "bajo",
+        "baix",
+        "baixos",
+        "basses",
+        "bariton",
+        "baríton",
+        "baríton",
+        "baritone",
+        "b",
+        "nois", # Means 'men' in Catalan
+        "salazar",# Orfeó Vigatà/Opera - 22 - Ària Pere+cor/voices
+        'pere', # Orfeó Vigatà/Opera - 18 - Cor soldats/voices
+    ],
+    "accompaniment": ["piano", "violin", "cello", "celli", "viola", 
+                      "oboe", "flauto", "violino", "violini", "fagotto", "orgel",
+                      "continuo", "orgel", "timpani", 
+                      "violone", "klaver", "organ", "organo", "fagotti", "violins", 
+                      "violoncellos", "accompaniment", "tromba",
+                     ],
+}
+alias_to_voice_type = {
+    alias: voice_type
+    for voice_type, aliases in voice_type_aliases.items()
+    for alias in aliases
+}
+
+
+
+def get_voice_type(part_name: str):
+    # Remove suffix such as part number (e.g. remove 'II' from 'Tenor II')
+    name = part_name.replace('_', ' ').replace('-', ' ').replace('í', 'i').strip()
+    name = name.split()[0]
+    name_old = name
+    name = name.rstrip(".1234567890")
+    name = name.lower()
+    voice_type = alias_to_voice_type.get(name, None)
+    if (voice_type == None):
+        for part in voice_type_aliases.keys():
+            if part in name:
+#                 print ("WARNING: part was not correctly mapped to voice type: ", 
+#                        part_name, "was matched to", part, "by inclusion")
+                voice_type = part
+    if (voice_type == None):
+        for part in voice_type_aliases.keys():
+            if part in part_name:
+#                 print ("WARNING: part was not correctly mapped to voice type: ", 
+#                        part_name, "was matched to", part, "by inclusion")
+#                 print ("INFO: get_voice_type did not manage to process this partname correctly:", part_name)
+                voice_type = part
+    return voice_type

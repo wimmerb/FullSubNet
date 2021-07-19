@@ -7,7 +7,8 @@ import torch
 import torch.nn as nn
 import soundfile as sf
 import torchaudio
-
+import warnings
+from pprint import pprint
 
 def stft(y, n_fft, hop_length, win_length):
     """
@@ -95,22 +96,51 @@ def mag_phase(complex_tensor):
     return torch.abs(complex_tensor), torch.angle(complex_tensor)
 
 
-def norm_amplitude(y, scalar=None, eps=1e-6):
+def norm_amplitude(y, scalar=None, eps=1e-6, dB_target=None, soft_fail=False):
+    if y.count_nonzero() == 0:
+        if soft_fail:
+            warnings.warn("tried to norm dead signal! Sample was bypassed")
+            return y, np.nan
+        else:
+            assert False, "normed dead signal!"
+        
+
     if not scalar:
-        scalar = np.max(np.abs(y)) + eps
+        if isinstance(y, np.ndarray):
+            scalar = np.max(np.abs(y)) + eps
+        elif torch.is_tensor (y):
+            scalar = torch.max(torch.abs(y)) + eps
+        else:
+            assert False, "expected numpy or torch tensor"
 
-    return y / scalar, scalar
+    if dB_target!=None:
+        scalar_norm = 10.0**(np.float(dB_target)/20.0)
+        return y / scalar * scalar_norm, scalar, scalar_norm
+    else:
+        return y / scalar, scalar
 
 
-def tailor_dB_FS(y, target_dB_FS=-25, eps=1e-6):
-    rms = np.sqrt(np.mean(y ** 2))
+def tailor_dB_FS(y, target_dB_FS=-25, eps=1e-6): # TODO: naming might be misleading, we are actually working on RMS and not on dB FS (see norm_amplitude, which actually does FS normalize)
+    if isinstance(y, np.ndarray):
+        rms = np.sqrt(np.mean(y ** 2))
+    elif torch.is_tensor (y):
+        rms = torch.sqrt(torch.mean(y ** 2))
+    else:
+        assert False, "expected numpy or torch tensor"
+
     scalar = 10 ** (target_dB_FS / 20) / (rms + eps)
     y *= scalar
     return y, rms, scalar
 
 
 def is_clipped(y, clipping_threshold=0.999):
-    return any(np.abs(y) > clipping_threshold)
+    if isinstance(y, np.ndarray):
+        return any(np.abs(y) > clipping_threshold)
+    elif torch.is_tensor (y):
+        return (torch.max(torch.abs(y)) > clipping_threshold).item()
+    else:
+        assert False, "expected numpy or torch tensor"
+
 
 
 def load_wav(file, sr=16000):
@@ -125,36 +155,44 @@ def load_wav(file, sr=16000):
         #print (sig.shape)
         return sig
 
-def _get_sample(path, resample=None, pitch_shift = 0):
+
+
+def load_wav_torch_to_np(snd_path, sr=None, normed=False, reverted=False):
+    sig, sample_rate = load_wav_torch(snd_path, sr=sr, normed=normed, reverted=reverted)
+    sig = np.transpose(np.array(sig[0,:])) #TODO transpose might not be needed
+    return sig, sample_rate
+
+def load_wav_torch(snd_path, sr=None, normed=False, pitch_shift = 0, reverted=False):
+    resample=sr
+    # print ("RIR SAMPLE")
     if pitch_shift == 0:
         effects = [
             ["remix", "1"]
         ]
-    else:
-        effects = [
-            ["remix", "1"],
-            ['pitch', str(int (pitch_shift))]
-        ]
+    if pitch_shift != 0:
+            effects.append(["pitch", str(int (pitch_shift))])
     #effects = [[]]
     if resample:
         effects.append(["rate", f'{resample}'])
-    return torchaudio.sox_effects.apply_effects_file(path, effects=effects)
-
-def load_wav_torch_to_np(snd_path, sr=None):
-    snd = np.transpose(np.array(load_wav_torch(snd_path, resample=sr)[0][0,:]))
-    return snd
-
-def load_wav_torch(snd_path, resample=None, processed=False, pitch_shift = 0):
-    
-    # print ("RIR SAMPLE")
-    snd_raw, sample_rate = _get_sample(snd_path, resample=resample, pitch_shift = pitch_shift)
+    snd_raw, sample_rate = torchaudio.sox_effects.apply_effects_file(snd_path, effects=effects)
     # print (rir_raw.shape)
-    if not processed:
+    assert torch.isfinite(snd_raw).all()
+
+    if not normed:
         return snd_raw, sample_rate
     # print(rir_raw.shape)
     snd = snd_raw # [:, int(sample_rate*1.01):int(sample_rate*1.3)]
-    snd = snd / torch.norm(snd, p=2)
-    snd = torch.flip(snd, [1])
+
+    if snd.count_nonzero() > 0:
+        norm = torch.norm(snd, p=2)
+        snd = snd / norm
+    else:
+        warnings.warn (f"{snd_path} is soundfile with no sound (only zero values).")
+
+    assert torch.isfinite(snd).all()
+
+    if reverted:
+        snd = torch.flip(snd, [1])
     # print (rir.shape)
     return snd, sample_rate
 
@@ -224,16 +262,19 @@ def subsample(data, sub_sample_length, start_position: int = -1, return_start_po
         return data
 
 def subsample_audio_tensor(data, sub_sample_length, start_position: int = -1, return_start_position=False):
-    assert len (data.shape) == 2, f"Only support 2D data. The dim is {np.ndim(data)}"
-    length = data.shape[1]
+    #assert len (data.shape) in [1]2, f"Only support 2D data. The dim is {np.ndim(data)}"
+    length = data.shape[-1]
     # print (length, sub_sample_length)
     if length > sub_sample_length:
         if start_position < 0:
             start_position = np.random.randint(length - sub_sample_length)
         end = start_position + sub_sample_length
-        data = data[:, start_position:end]
+        data = data[... , start_position:end]
     else:
-        data = torch.nn.functional.pad(data, (int(np.floor(sub_sample_length))-data.shape[1],0))
+        print (f"OOPS! data is shorter than subsample length?? It's of length {length} and shape {data.shape}")
+        pprint (data)
+        data = torch.nn.functional.pad(data, (0, int(np.floor(sub_sample_length))-data.shape[-1]))
+        start_position = 0
         # TODO could be implemented
         #assert False
 

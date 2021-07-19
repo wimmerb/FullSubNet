@@ -9,6 +9,8 @@ from joblib import Parallel, delayed
 from scipy import signal
 from tqdm import tqdm
 
+import sys
+sys.path.append("/home/benedikt/thesis/repos/FullSubNet")
 from audio_zen.dataset.base_dataset import BaseDataset
 from audio_zen.acoustics.feature import norm_amplitude, tailor_dB_FS, is_clipped, load_wav, save_wav, subsample, subsample_audio_tensor
 from audio_zen.utils import expand_path, basename, sample_fixed_length_data_aligned

@@ -18,6 +18,7 @@ class Dataset(BaseDataset):
             dataset_dir_list,
             sr,
             limit = 2000,
+            target_task =None,
             sample_for_wave_u_net=False,
             sub_sample_length=1.0
     ):
@@ -41,6 +42,7 @@ class Dataset(BaseDataset):
         self.noisy_files_list = shuffle(noisy_files_list)[:limit]
         self.sr = sr
 
+        self.target_task = target_task
         self.sample_for_wave_u_net = sample_for_wave_u_net
         #self.sample_length=sample_length
         self.sample_length = int(np.floor(sub_sample_length * self.sr)) # this is only used for wave_u_net
@@ -62,20 +64,25 @@ class Dataset(BaseDataset):
         noisy_file_path = self.noisy_files_list[item]
         noisy_filename, _ = basename(noisy_file_path)
 
-        reverb_remark = ""
-
+        
         speech_type = "all"
 
         clean_file_path = find_parallel_data (noisy_file_path, "clean")
 
-        noisy = load_wav_torch_to_np(noisy_file_path, sr=self.sr)
-        clean = load_wav_torch_to_np(clean_file_path, sr=self.sr)
+        noisy, _ = load_wav_torch_to_np(noisy_file_path, sr=self.sr)
+        clean, _ = load_wav_torch_to_np(clean_file_path, sr=self.sr)
+
+        if self.target_task in ["BGMI"]:
+            bgm_file_path = find_parallel_data (noisy_file_path, "bgm")
+            bgm, _ = load_wav_torch_to_np(bgm_file_path, sr=self.sr)
+            return noisy, clean, bgm, noisy_filename, speech_type
+
         if self.sample_for_wave_u_net:
             #mixture, clean = sample_fixed_length_data_aligned(noisy, clean, len(noisy))    
             mixture, clean = sample_fixed_length_data_aligned(noisy, clean, self.sample_length)    
-            return mixture.reshape(1, -1), clean.reshape(1, -1), reverb_remark + noisy_filename, speech_type
+            return mixture.reshape(1, -1), clean.reshape(1, -1), noisy_filename, speech_type
 
-        return noisy, clean, reverb_remark + noisy_filename, speech_type
+        return noisy, clean, noisy_filename, speech_type
 
 
 

@@ -1,0 +1,107 @@
+[meta]
+save_dir = "/home/benedikt/Experiments/LEAKAGE_REMOVAL/fsn_basic_split/subsub_split_2021_7_17"
+description = "Unsophisticated subsub adaption. SI-SDR validation loss. Lookahead of 2."
+seed = 0  # set random seed for random, numpy, pytorch-gpu and pytorch-cpu
+keep_reproducibility = false  # see https://pytorch.org/docs/stable/notes/randomness.html
+use_amp = false  # use automatic mixed precision, it will benefits Tensor Core-enabled GPU (e.g. Volta, Turing, Ampere). 2-3X speedup。
+
+[trainer]
+path = "fullsubnet_aec.trainer.Trainer"
+[trainer.train]
+clip_grad_norm_value = 10
+epochs = 9999
+save_checkpoint_interval = 1
+[trainer.validation]
+save_max_metric_score = true
+validation_interval = 1
+used_metric = "SI_SDR"
+
+[trainer.visualization]
+metrics = ["WB_PESQ", "NB_PESQ", "STOI", "SI_SDR"]
+n_samples = 1
+num_workers = 12 #this nr seems to not have effect on OOM
+
+[model]
+path = "fullsubnet_aec.fsn_subsub_split_model.Model"
+
+[model.args]
+sb_num_neighbors = 15
+fb_num_neighbors = 15
+num_freqs = 257
+look_ahead = 2
+sequence_model = "LSTM"
+fb_output_activate_function = "ReLU"
+sb_output_activate_function = false
+fb_model_hidden_size = 256
+sb_model_hidden_size = 384
+weight_init = false
+norm_type = "offline_laplace_norm"
+num_groups_in_drop_band = 2
+
+[acoustics]
+n_fft = 512
+win_length = 512
+sr = 16000 #not sure if used (base_trainer uses acoustics, but nor sr)
+hop_length = 256
+
+
+[loss_function]
+name = "mse_loss"
+[loss_function.args]
+
+
+[optimizer]
+lr = 0.001
+beta1 = 0.9
+beta2 = 0.999
+
+
+[train_dataset]
+path = "audio_zen.dataset.dynamic_BGM_dataset.Dataset"
+[train_dataset.args]
+file_list_fn = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/LEAKAGE_REMOVAL/LEAKAGE_REMOVAL_2021_7_15/data_splitting_2/train_file_paths.txt"
+rir_list_fn = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/LEAKAGE_REMOVAL/LEAKAGE_REMOVAL_2021_7_15/data_splitting_2/rir_TRAIN.txt"
+mir_list_fn = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/LEAKAGE_REMOVAL/LEAKAGE_REMOVAL_2021_7_15/data_splitting_2/mir_TRAIN.txt"
+nr_aug_variations = 5
+mir_apply_cnt_list = [0,1,2]
+rir_apply_cnt_list = [0,1,1]
+#mir_apply_cnt_list = [0]
+#rir_apply_cnt_list = [0]
+sr = 16000
+sub_sample_length = 3.02
+max_audio_length = 80
+aligned_prob = 0.5
+include_lead_in_accomp_prob = 0.1
+sample_for_validation_or_test_creation = false
+nr_samples_per_voice_v_augmentation_combination = 5
+snr_range = [6, 20]
+target_dB_FS = -25
+target_dB_FS_floating_value = 10
+
+grvp_max_n_tries_foreground = 5
+grvp_max_n_tries_background = 3
+
+eps = 1e-6
+dry_run=false
+target_task="fsn_aec"
+
+silent_lead_prob = 0.01
+
+[train_dataset.dataloader]
+batch_size = 8
+num_workers = 1             #set to 1! important for buffered dataset
+drop_last = true
+pin_memory = true
+shuffle = true
+
+
+[validation_dataset]
+path = "audio_zen.dataset.parallel_dataset.Dataset"
+
+[validation_dataset.args]
+dataset_dir_list = [
+    "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/LEAKAGE_REMOVAL/LEAKAGE_REMOVAL_2021_7_15/VALIDATION_SET_CONV"
+]
+sr = 16000
+limit = 400
+target_task = "BGMI"
