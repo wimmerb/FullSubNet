@@ -4,7 +4,7 @@ from torch.cuda.amp import autocast
 from tqdm import tqdm
 import numpy as np
 
-from audio_zen.acoustics.feature import mag_phase, drop_band
+from audio_zen.acoustics.feature import mag_phase, drop_band, save_wav
 from audio_zen.acoustics.mask import build_complex_ideal_ratio_mask, decompress_cIRM
 from audio_zen.trainer.base_trainer import BaseTrainer
 
@@ -55,18 +55,18 @@ class Trainer(BaseTrainer):
 
             noisy_mag, _ = mag_phase(noisy_complex)
             ground_truth_cIRM = build_complex_ideal_ratio_mask(noisy_complex, clean_complex)  # [B, F, T, 2]
-            print("cIRM before drop band", ground_truth_cIRM.shape)
+            # print("cIRM before drop band", ground_truth_cIRM.shape)
             ground_truth_cIRM = drop_band(
                 ground_truth_cIRM.permute(0, 3, 1, 2),  # [B, 2, F ,T]
                 self.model.module.num_groups_in_drop_band
             ).permute(0, 2, 3, 1)
-            print("cIRM after drop band", ground_truth_cIRM.shape)
+            # print("cIRM after drop band", ground_truth_cIRM.shape)
 
             with autocast(enabled=self.use_amp):
                 # [B, F, T] => [B, 1, F, T] => model => [B, 2, F, T] => [B, F, T, 2]
                 noisy_mag = noisy_mag.unsqueeze(1)
                 cRM = self.model(noisy_mag)
-                print("cRM from model", cRM.shape)
+                # print("cRM from model", cRM.shape)
 
                 assert torch.isfinite(ground_truth_cIRM).all(), "cIRM ground truth ratio mask not finite!!!"
 
@@ -74,8 +74,8 @@ class Trainer(BaseTrainer):
                     
                
                 cRM = cRM.permute(0, 2, 3, 1)
-                print("cRM before loss function", cRM.shape)
-                assert False
+                # print("cRM before loss function", cRM.shape)
+                # assert False # TODO remove this... why is it there?
 
                 loss = self.loss_function(ground_truth_cIRM, cRM)
 
@@ -117,6 +117,7 @@ class Trainer(BaseTrainer):
             assert len(name) == 1, "The batch size for the validation stage must be one."
             name = name[0]
             speech_type = speech_type[0]
+
 
             if not (np.isfinite(noisy).all() and np.isfinite(clean).all()):
                 assert False
@@ -186,6 +187,7 @@ class Trainer(BaseTrainer):
                     assert False
                 print("executing spec_audio_visualization")
                 print (enhanced)
+                
                 self.spec_audio_visualization(noisy, enhanced, clean, name, epoch, mark=speech_type)
             # else:
             #     print("GOING TO spec_audio_visualization, but not executing")
@@ -205,9 +207,18 @@ class Trainer(BaseTrainer):
         for speech_type in ["all"]:
             self.writer.add_scalar(f"Loss/{speech_type}", loss_list[speech_type] / len(self.valid_dataloader), epoch)
 
+            for i in range(5):
+                print("saving audio...")
+                tmp_name = f"{i}.wav"
+                save_wav (f"tmp/noisy_{tmp_name}", noisy_y_list[speech_type][i])
+                save_wav (f"tmp/enhanced_{tmp_name}", enhanced_y_list[speech_type][i])
+                save_wav (f"tmp/clean_{tmp_name}", clean_y_list[speech_type][i])
+
             validation_score_list[speech_type] = self.metrics_visualization(
                 noisy_y_list[speech_type], clean_y_list[speech_type], enhanced_y_list[speech_type],
                 visualization_metrics, epoch, visualization_num_workers, mark=speech_type
             )
+
+            
 
         return validation_score_list["all"]

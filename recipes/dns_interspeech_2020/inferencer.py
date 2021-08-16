@@ -127,6 +127,39 @@ class Inferencer(BaseInferencer):
         return enhanced
 
     @torch.no_grad()
+    def full_band_crm_mask_BGMI(self, noisy_v_bgm, inference_args):
+        noisy = noisy_v_bgm[:,0,:]
+        bgm = noisy_v_bgm[:,1,:]
+
+        noisy_complex = self.torch_stft(noisy)
+        noisy_mag, _ = mag_phase(noisy_complex)
+        noisy_mag = noisy_mag.unsqueeze(1)
+
+        bgm_complex = self.torch_stft(bgm)
+        bgm_mag, _ = mag_phase(bgm_complex)
+        bgm_mag = bgm_mag.unsqueeze(1)
+
+        pred_crm = self.model(noisy_mag=noisy_mag, bgm_mag=bgm_mag)
+        pred_crm = pred_crm.permute(0, 2, 3, 1)
+
+        pred_crm = decompress_cIRM(pred_crm)
+        enhanced_real = pred_crm[..., 0] * noisy_complex.real - pred_crm[..., 1] * noisy_complex.imag
+        enhanced_imag = pred_crm[..., 1] * noisy_complex.real + pred_crm[..., 0] * noisy_complex.imag
+        enhanced_complex = torch.stack((enhanced_real, enhanced_imag), dim=-1)
+        enhanced = self.torch_istft(enhanced_complex, length=noisy.size(-1))
+        enhanced = enhanced.detach().squeeze(0).cpu().numpy()
+        return enhanced
+
+    @torch.no_grad()
+    def dtln_direct (self, noisy_v_bgm, inference_args):
+        noisy = noisy_v_bgm[:,0,:]
+        bgm = noisy_v_bgm[:,1,:]
+        enhanced = pred = self.model(noisy, bgm)
+        enhanced = enhanced.detach().squeeze(0).cpu().numpy()
+        return enhanced
+
+
+    @torch.no_grad()
     def overlapped_chunk(self, noisy, inference_args):
         noisy = noisy.squeeze(0)
 

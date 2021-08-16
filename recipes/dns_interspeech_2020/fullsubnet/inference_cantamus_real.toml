@@ -1,0 +1,66 @@
+#python inference.py \
+#  -C fullsubnet/inference.toml \
+#  -M /path/to/your/checkpoint_dir/best_model.tar \
+#  -O /path/to/your/enhancement/dir
+
+# run inference with 
+# CUDA_VISIBLE_DEVICES=0 python inference.py -C fullsubnet/inference.toml -M /home/benedikt/thesis/repos/FullSubNet/FullSubNet_TRY_14_06_21_DENOISE/train_16k_buf/checkpoints/best_model.tar -O ~/Experiments/FullSubNet/Denoise_21_06_14/inference
+# CUDA_VISIBLE_DEVICES="" python inference.py -C fullsubnet/inference.toml -M /home/benedikt/Experiments/FullSubNet/Dereverb_21_06_28/train_16k_buf/checkpoints/best_model.tar -O /home/benedikt/Experiments/FullSubNet/Dereverb_21_06_28/inference
+
+[acoustics]
+sr = 16000
+n_fft = 512
+win_length = 512
+hop_length = 256
+
+
+[inferencer]
+path = "inferencer.Inferencer"
+type = "full_band_crm_mask"
+
+[inferencer.args]
+n_neighbor = 15
+
+
+#[dataset]
+#path = "dataset_inference.Dataset"
+
+#[dataset.args]
+#dataset_dir_list = [
+    #"/home/benedikt/thesis/datasets/VSED/noisy_reverb_nb/m8"
+    #"enhancement/noisy"
+#    /home/benedikt/thesis/TRAIN_EVALUATION_DATA/TROMPA_REHEARSALS/
+#]
+#sr = 16000
+
+[dataset]
+path = "audio_zen.dataset.waveform_dataset_enhancement.WaveformDataset"
+[dataset.args]
+# dataset = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/TROMPA_REHEARSALS/all_recordings.txt"
+# dataset = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/showcase_denoise/showcase_denoise_noisy.txt"
+# dataset = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/showcase_dereverb/showcase_dereverb_noisy.txt"
+# dataset = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/showcase_leakage/showcase_leakage.txt"#
+dataset = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/DENOISING_21_06_24/TEST_SET_CANTAMUS_REAL/info/TEST_SET_CANTAMUS_REAL.txt"
+
+limit = 9999
+offset = 0
+sr = 16000
+sample_for_wave_u_net = false
+
+[model]
+path = "fullsubnet.model.Model"
+
+[model.args]
+sb_num_neighbors = 15
+fb_num_neighbors = 0
+num_freqs = 257
+look_ahead = 2
+sequence_model = "LSTM"
+fb_output_activate_function = "ReLU"
+sb_output_activate_function = false
+fb_model_hidden_size = 512
+sb_model_hidden_size = 384
+weight_init = false
+norm_type = "offline_laplace_norm"
+num_groups_in_drop_band = 2
+

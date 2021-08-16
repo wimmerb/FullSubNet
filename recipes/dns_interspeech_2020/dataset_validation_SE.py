@@ -95,8 +95,10 @@ class Dataset(BaseDataset):
 
         #noisy = load_wav(os.path.abspath(os.path.expanduser(noisy_file_path)), sr=self.sr)
         #clean = load_wav(os.path.abspath(os.path.expanduser(clean_file_path)), sr=self.sr)
-        noisy = load_wav_torch_to_np(os.path.abspath(os.path.expanduser(noisy_file_path)), sr=self.sr)
-        clean = load_wav_torch_to_np(os.path.abspath(os.path.expanduser(clean_file_path)), sr=self.sr)
+        noisy, _ = load_wav_torch_to_np(os.path.abspath(os.path.expanduser(noisy_file_path)), sr=self.sr)
+        clean, _ = load_wav_torch_to_np(os.path.abspath(os.path.expanduser(clean_file_path)), sr=self.sr)
+
+        speech_type = "all"
 
         return noisy, clean, reverb_remark + noisy_filename, speech_type
 

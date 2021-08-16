@@ -86,7 +86,12 @@ if __name__ == '__main__':
 
     configuration = toml.load(args.configuration)
 
-    configuration["meta"]["experiment_name"], _ = os.path.splitext(os.path.basename(args.configuration))
+    # TODO
+    # This helps find the original config for this experiment... 
+    # The config for this experiment is copied stored in a separate file in the save_dir specified in the config. Kinda recursing and can get confusing. Probably not even needed.
+    if configuration["meta"].get("experiment_name", None) == None: # needed in case of training, there is no experiment name yet (in some configs)
+        configuration["meta"]["experiment_name"], _ = os.path.splitext(os.path.basename(args.configuration))
+
     configuration["meta"]["config_path"] = args.configuration
     configuration["meta"]["preloaded_model_path"] = args.preloaded_model_path
 
