@@ -265,12 +265,12 @@ class Dataset(BaseDataset):
             else:
                 clean_y_reverberant = clean_y
 
-        clean_y, _ = norm_amplitude(clean_y)
+        clean_y, _ = norm_amplitude(clean_y, soft_fail = True)
         clean_y, _, _ = tailor_dB_FS(clean_y, target_dB_FS)
         clean_rms = (clean_y ** 2).mean() ** 0.5
 
         if not clean_y_reverberant is None: # we are in a dereverb or denoise+dereverb scenario
-            clean_y_reverberant, _ = norm_amplitude(clean_y_reverberant)
+            clean_y_reverberant, _ = norm_amplitude(clean_y_reverberant, soft_fail = True)
             clean_y_reverberant, _, _ = tailor_dB_FS(clean_y_reverberant, target_dB_FS)
             clean_reverberant_rms = (clean_y_reverberant ** 2).mean() ** 0.5
 
@@ -285,7 +285,7 @@ class Dataset(BaseDataset):
             target = clean_y
 
         if "denoise" in self.target_task:
-            noise_y, _ = norm_amplitude(noise_y)
+            noise_y, _ = norm_amplitude(noise_y, soft_fail = True)
             noise_y, _, _ = tailor_dB_FS(noise_y, target_dB_FS)
             noise_rms = (noise_y ** 2).mean() ** 0.5
 

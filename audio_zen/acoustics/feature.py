@@ -10,6 +10,8 @@ import torchaudio
 import warnings
 from pprint import pprint
 
+from pathlib import Path
+
 def stft(y, n_fft, hop_length, win_length):
     """
     Args:
@@ -97,7 +99,14 @@ def mag_phase(complex_tensor):
 
 
 def norm_amplitude(y, scalar=None, eps=1e-6, dB_target=None, soft_fail=False):
-    if y.count_nonzero() == 0:
+    if isinstance(y, np.ndarray):
+        calc_system = np
+    elif torch.is_tensor (y):
+        calc_system = torch
+    else:
+        assert False, "expected numpy or torch tensor"
+        
+    if calc_system.count_nonzero(y) == 0:
         if soft_fail:
             warnings.warn("tried to norm dead signal! Sample was bypassed")
             return y, np.nan
@@ -197,6 +206,9 @@ def load_wav_torch(snd_path, sr=None, normed=False, pitch_shift = 0, reverted=Fa
     return snd, sample_rate
 
 def save_wav(file, sig, sr=16000, verbose=False):
+    file = Path(file)
+    if not os.path.exists(file.absolute().parents[0]):
+        os.mkdir(file.absolute().parents[0])
     sf.write(file, sig, sr, subtype='PCM_16')
     if verbose:
         print ("saved file: ", file)
@@ -275,8 +287,6 @@ def subsample_audio_tensor(data, sub_sample_length, start_position: int = -1, re
         pprint (data)
         data = torch.nn.functional.pad(data, (0, int(np.floor(sub_sample_length))-data.shape[-1]))
         start_position = 0
-        # TODO could be implemented
-        #assert False
 
     if return_start_position:
         return data, start_position

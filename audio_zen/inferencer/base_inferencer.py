@@ -136,7 +136,7 @@ class BaseInferencer:
                 print(f"Warning: enhanced is not in the range [-1, 1], {name}")
 
             amp = np.iinfo(np.int16).max
-            enhanced = np.int16(0.8 * amp * enhanced / np.max(np.abs(enhanced)))
+            enhanced = np.int16(0.8 * amp * enhanced / np.max(np.abs(enhanced))) #TODO do this only when data is clipping!!!
 
             # clnsp102_traffic_248091_3_snr0_tl-21_fileid_268 => clean_fileid_0
             # name = "clean_" + "_".join(name.split("_")[-2:])

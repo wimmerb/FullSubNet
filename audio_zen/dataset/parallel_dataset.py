@@ -65,6 +65,7 @@ class Dataset(BaseDataset):
         noisy_filename, _ = basename(noisy_file_path)
 
         
+        
         speech_type = "all"
 
         clean_file_path = find_parallel_data (noisy_file_path, "clean")
@@ -72,10 +73,28 @@ class Dataset(BaseDataset):
         noisy, _ = load_wav_torch_to_np(noisy_file_path, sr=self.sr)
         clean, _ = load_wav_torch_to_np(clean_file_path, sr=self.sr)
 
+        if self.target_task in ["BGMI_INFERENCE"]:
+            bgm_file_path = find_parallel_data (noisy_file_path, "bgm")
+            bgm, _ = load_wav_torch_to_np(bgm_file_path, sr=self.sr)
+            origin_testset = str(Path(noisy_file_path).parts[-3])
+
+            noisy_v_bgm = np.array([noisy, bgm])
+
+            return noisy_v_bgm, str(origin_testset + noisy_filename)
+
+        if self.target_task in ["BGMI_INFERENCE_PLAIN"]:
+
+            origin_testset = str(Path(noisy_file_path).parts[-3])
+
+            return noisy, str(origin_testset + noisy_filename)
+
+
         if self.target_task in ["BGMI"]:
             bgm_file_path = find_parallel_data (noisy_file_path, "bgm")
             bgm, _ = load_wav_torch_to_np(bgm_file_path, sr=self.sr)
             return noisy, clean, bgm, noisy_filename, speech_type
+
+        
 
         if self.sample_for_wave_u_net:
             #mixture, clean = sample_fixed_length_data_aligned(noisy, clean, len(noisy))    

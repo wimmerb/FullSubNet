@@ -74,6 +74,8 @@ def SI_SDR(reference, estimation, sr=16000):
     """
     estimation, reference = np.broadcast_arrays(estimation, reference)
     reference_energy = np.sum(reference ** 2, axis=-1, keepdims=True)
+    if np.count_nonzero(reference) == 0:
+        return np.nan
 
     optimal_scaling = np.sum(reference * estimation, axis=-1, keepdims=True) / reference_energy
 
@@ -82,6 +84,7 @@ def SI_SDR(reference, estimation, sr=16000):
     noise = estimation - projection
 
     ratio = np.sum(projection ** 2, axis=-1) / np.sum(noise ** 2, axis=-1)
+    
     return 10 * np.log10(ratio)
 
 

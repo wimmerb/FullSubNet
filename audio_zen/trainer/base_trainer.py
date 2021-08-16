@@ -1,6 +1,7 @@
 import time
 from functools import partial
 from pathlib import Path
+import sys
 
 import colorful
 import librosa
@@ -31,6 +32,8 @@ class BaseTrainer:
 
         self.color_tool = colorful
         self.color_tool.use_style("solarized")
+
+        print(rank)
 
         model = DistributedDataParallel(model.to(rank), device_ids=[rank])
         self.model = model
@@ -89,7 +92,7 @@ class BaseTrainer:
         self.only_validation = only_validation
 
         if config["meta"]["preloaded_model_path"]:
-            self._preload_model(Path(config["preloaded_model_path"]))
+            self._preload_model(Path(config["meta"]["preloaded_model_path"]))
 
         if self.rank == 0:
             prepare_empty_dir([self.checkpoints_dir, self.logs_dir], resume=resume)
@@ -106,8 +109,9 @@ class BaseTrainer:
             print(self.color_tool.cyan(toml.dumps(config)[:-1]))  # except "\n"
             print(self.color_tool.cyan("=" * 40))
 
-            with open((self.save_dir / f"{time.strftime('%Y-%m-%d %H:%M:%S')}.toml").as_posix(), "w") as handle:
-                toml.dump(config, handle)
+            if not self.only_validation:
+                with open((self.save_dir / f"{time.strftime('%Y-%m-%d %H:%M:%S')}.toml").as_posix(), "w") as handle:
+                    toml.dump(config, handle)
 
             self._print_networks([self.model])
 
@@ -130,9 +134,11 @@ class BaseTrainer:
 
     def _resume_checkpoint(self):
         """
-        Resume the experiment from the latest checkpoint.
+        Resume the experiment from the best checkpoint.
         """
-        latest_model_path = self.checkpoints_dir.expanduser().absolute() / "latest_model.tar"
+        #TODO Bene: make own function but for now .... do best checkpoint here instead! saves me time
+        #latest_model_path = self.checkpoints_dir.expanduser().absolute() / "latest_model.tar"
+        latest_model_path = self.checkpoints_dir.expanduser().absolute() / "best_model.tar"
         assert latest_model_path.exists(), f"{latest_model_path} does not exist, can not load latest checkpoint."
 
         # Make sure all processes (GPUs) do not start loading before the saving is finished.
@@ -279,6 +285,12 @@ class BaseTrainer:
 
         stoi_mean = 0.0
         wb_pesq_mean = 0.0
+        si_sdr_mean = 0.0
+
+        stoi_mean_pass = 0.0
+        wb_pesq_mean_pass = 0.0
+        si_sdr_mean_pass = 0.0
+
         for metric_name in metrics_list:
             score_on_noisy = Parallel(n_jobs=num_workers)(
                 delayed(metrics.REGISTERED_METRICS[metric_name])(ref, est) for ref, est in zip(clean_list, noisy_list)
@@ -287,8 +299,9 @@ class BaseTrainer:
             score_on_enhanced = Parallel(n_jobs=num_workers)(
                 delayed(metrics.REGISTERED_METRICS[metric_name])(ref, est) for ref, est in zip(clean_list, enhanced_list)
             )
-            score_on_noisy = [x for x in score_on_noisy if x != None and str(x) != 'nan']
-            score_on_enhanced = [x for x in score_on_enhanced if x != None and str(x) != 'nan']
+
+            score_on_noisy = [x for x in score_on_noisy if x != None and str(x) != 'nan' and x != np.nan and x != np.inf]
+            score_on_enhanced = [x for x in score_on_enhanced if x != None and str(x) != 'nan' and x != np.nan]
 
 
             # Add the mean value of the metric to tensorboard
@@ -301,8 +314,10 @@ class BaseTrainer:
 
             if metric_name == "STOI":
                 stoi_mean = mean_score_on_enhanced
+                stoi_mean_pass = mean_score_on_noisy
             if metric_name == "SI_SDR":
                 si_sdr_mean = mean_score_on_enhanced
+                si_sdr_mean_pass = mean_score_on_noisy
                 # print ("§§§§§§§§§§§§")
                 # print (score_on_enhanced)
                 # print (mean_score_on_enhanced)
@@ -310,6 +325,8 @@ class BaseTrainer:
 
             if metric_name == "WB_PESQ":
                 wb_pesq_mean = transform_pesq_range(mean_score_on_enhanced)
+                orig_wb_pesq_mean = mean_score_on_enhanced
+                orig_wb_pesq_mean_pass = mean_score_on_noisy
         
         metric_output = None
         if self.validation_used_metric == None:
@@ -319,6 +336,12 @@ class BaseTrainer:
         else:
             assert False
         
+        print("========================================")
+        print("STOI mean:", stoi_mean, "reference:", stoi_mean_pass)
+        print("PESQ mean:", orig_wb_pesq_mean, "reference:", orig_wb_pesq_mean_pass)
+        print("SI_SDR mean:", si_sdr_mean, "reference:", si_sdr_mean_pass)
+        print("========================================")
+        print(self.save_max_metric_score)
         print ("Score of validation is:", metric_output, f"({str(self.validation_used_metric)})")
         return metric_output
 
@@ -329,20 +352,21 @@ class BaseTrainer:
                 print("[0 seconds] Begin training...")
 
             # [debug validation] Only run validation (only use the first GPU (process))
-            # inference + calculating metrics + saving checkpoints
+            # inference + calculating metrics (+ saving checkpoints)
             if self.only_validation and self.rank == 0:
                 self._set_models_to_eval_mode()
                 
                 print(self.color_tool.red("Always check that your validation set target matches your training set target!"))
-                print(self.color_tool.red("target task: \t" + str(self.config["train_dataset"]["args"]["target_task"])))
+                print(self.color_tool.red("target task: \t" + str(self.config["train_dataset"]["args"].get("target_task", None))))
                 print(self.color_tool.red("validation set paths: \t" + str(self.config["validation_dataset"]["args"]["dataset_dir_list"])))
                 
                 metric_score = self._validation_epoch(epoch)
 
-                if self._is_best_epoch(metric_score, save_max_metric_score=self.save_max_metric_score):
-                    self._save_checkpoint(epoch, is_best_epoch=True)
+                # if self._is_best_epoch(metric_score, save_max_metric_score=self.save_max_metric_score):
+                #     self._save_checkpoint(epoch, is_best_epoch=True)
 
                 # Skip the following regular training, saving checkpoints, and validation
+                sys.exit(0)
                 continue
 
             # Regular training

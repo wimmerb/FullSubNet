@@ -453,7 +453,7 @@ class Dataset(BaseDataset):
             #we just want to use the identity
             assert nr_aug_variations >= len(leading_voices_idx) #so that we can get a unique augmentation for each voice
             assert nr_samples_per_voice_v_augmentation_combination == 1
-            assert mode=='aligned'
+            #assert mode=='aligned' #turn off if you want to allow test set creation with unaligned data
             
         for _ in range (nr_samples_per_voice_v_augmentation_combination):
             for i in leading_voices_idx:
