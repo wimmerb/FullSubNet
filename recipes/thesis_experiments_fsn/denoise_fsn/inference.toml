@@ -47,7 +47,7 @@ sr = 16000
 sample_for_wave_u_net = false
 
 [model]
-path = "fullsubnet.model.Model"
+path = "denoise_fsn.model.Model"
 
 [model.args]
 sb_num_neighbors = 15

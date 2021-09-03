@@ -18,10 +18,10 @@ beta1 = 0.9
 beta2 = 0.999
 
 [model]
-path = "fullsubnet.model.Model"
+path = "denoise_fsn.model.Model"
 
 [trainer]
-path = "fullsubnet.trainer.Trainer"
+path = "denoise_fsn.trainer.Trainer"
 
 [loss_function]
 name = "mse_loss"
