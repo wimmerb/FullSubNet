@@ -1,0 +1,28 @@
+{
+    "model": {
+        "module": "model_denoise.unet_basic",
+        "main": "Model",
+        "args": {}
+    },
+    "dataset": {
+        "module": "dataset.waveform_dataset_enhancement",
+        "main": "WaveformDataset",
+        "args": {
+            "dataset": "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/showcase_denoise/showcase_denoise_noisy.txt",
+            "limit": 9999,
+            "offset": 0,
+            "sr": 16000
+        }
+    },
+    "custom": {
+        "sample_length": 16384
+    },
+    "$$comment_dataset_paths$$": [
+        "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/TROMPA_REHEARSALS/all_recordings.txt",
+        "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/showcase_dereverb/showcase_dereverb_noisy.txt",
+        "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/showcase_denoise/showcase_denoise_noisy.txt",
+        "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/showcase_leakage/showcase_leakage.txt",
+        "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/DENOISING_21_06_24/TEST_SET_CANTAMUS_REAL/info/TEST_SET_CANTAMUS_REAL.txt"
+    ],
+    "$$comment$$": "python enhancement.py -C config/enhancement/unet_basic.json -D 0 -O /home/benedikt/Experiments/Wave-U-Net/Dereverb_21_06_26/inference -M /home/benedikt/Experiments/Wave-U-Net/Dereverb_21_06_26/train_dereverb/checkpoints/best_model.tar"
+}
