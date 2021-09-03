@@ -1,0 +1,42 @@
+#python inference.py \
+#  -C fullsubnet/inference.toml \
+#  -M /path/to/your/checkpoint_dir/best_model.tar \
+#  -O /path/to/your/enhancement/dir
+
+# run inference with 
+# CUDA_VISIBLE_DEVICES=0 python inference.py -C fullsubnet/inference.toml -M /home/benedikt/thesis/repos/FullSubNet/FullSubNet_TRY_14_06_21_DENOISE/train_16k_buf/checkpoints/best_model.tar -O ~/Experiments/FullSubNet/Denoise_21_06_14/inference
+# CUDA_VISIBLE_DEVICES="" python inference.py -C fullsubnet/inference.toml -M /home/benedikt/Experiments/FullSubNet/Dereverb_21_06_28/train_16k_buf/checkpoints/best_model.tar -O /home/benedikt/Experiments/FullSubNet/Dereverb_21_06_28/inference
+
+[model]
+path = "leakage_rm.dtln_fix_aec.DTLN"
+
+[model.args]
+sample_rate = 16000
+sample_duration = 5.0
+batch_size = 16
+hidden_size = 512
+hop_size = 128 #8ms
+window_size = 512 #16ms
+
+
+[inferencer]
+path = "inferencer.Inferencer"
+type = "dtln_direct"
+
+[inferencer.args]
+
+[dataset]
+path = "audio_zen.dataset.parallel_dataset.Dataset"
+
+[dataset.args]
+dataset_dir_list = [
+    "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/LEAKAGE_REMOVAL/LEAKAGE_REMOVAL_2021_7_15/TEST_SET_CONV",
+    "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/LEAKAGE_REMOVAL/LEAKAGE_REMOVAL_2021_7_15/TEST_SET_ALIGNED_LONG_CONV",
+    "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/LEAKAGE_REMOVAL/LEAKAGE_REMOVAL_2021_7_15/TEST_SET_UNALIGNED_LONG_CONV",
+    "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/LEAKAGE_REMOVAL/LEAKAGE_REMOVAL_2021_7_15/TEST_SET_FOR_HUMAN_ALIGNED",
+    "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/LEAKAGE_REMOVAL/LEAKAGE_REMOVAL_2021_7_15/TEST_SET_FOR_HUMAN_UNALIGNED"
+
+]
+sr = 16000
+limit = 400
+target_task = "BGMI_INFERENCE"

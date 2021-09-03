@@ -1,0 +1,117 @@
+[meta]
+save_dir = "/home/benedikt/Experiments/LEAKAGE_REMOVAL/DTLN"
+description = "See below. Data aug as others, hidden size 512"
+seed = 0
+keep_reproducibility = false
+use_amp = false
+
+[trainer]
+path = "dtln_aec.trainer.Trainer"
+
+[trainer.train]
+clip_grad_norm_value = 10
+epochs = 9999
+save_checkpoint_interval = 1
+
+[trainer.validation]
+save_max_metric_score = true
+validation_interval = 1
+used_metric = "SI_SDR"
+
+[trainer.visualization]
+metrics = [ "WB_PESQ", "NB_PESQ", "STOI", "SI_SDR",]
+n_samples = 1
+num_workers = 12
+
+#model default
+# def __init__(self,
+#                  sample_rate: int = 16000,
+#                  window_size: int = 512,
+#                  hop_size: int = 128,
+#                  sample_duration: int = 15,
+#                  hidden_size: int = 128,
+#                  encoder_size: int = 256,
+#                  dropout_rate: float = 0.25,
+#                  eps: float = 1e-7,
+#                  learning_rate: float = 1e-4,
+#                  batch_size: int = 32,
+#                  ):
+
+
+[model]
+path = "leakage_rm.dtln_fix_aec.DTLN"
+
+[model.args]
+sample_rate = 16000
+sample_duration = 5.072
+batch_size = 16
+hidden_size = 512
+hop_size = 128 #8ms
+window_size = 512 #16ms
+
+[acoustics] #probs not needed for DTLN, as this is done inside...
+n_fft = 512
+win_length = 512
+sr = 16000
+hop_length = 256
+
+[loss_function]
+name = "si_snr_loss"
+[loss_function.args]
+
+[optimizer]
+lr = 0.0002
+beta1 = 0.9
+beta2 = 0.999
+
+
+
+[train_dataset]
+path = "audio_zen.dataset.dynamic_BGM_dataset.Dataset"
+[train_dataset.args]
+file_list_fn = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/LEAKAGE_REMOVAL/LEAKAGE_REMOVAL_2021_7_15/data_splitting_2/train_file_paths.txt"
+rir_list_fn = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/LEAKAGE_REMOVAL/LEAKAGE_REMOVAL_2021_7_15/data_splitting_2/rir_TRAIN.txt"
+mir_list_fn = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/LEAKAGE_REMOVAL/LEAKAGE_REMOVAL_2021_7_15/data_splitting_2/mir_TRAIN.txt"
+nr_aug_variations = 5
+mir_apply_cnt_list = [0,1,2]
+rir_apply_cnt_list = [0,1,1]
+#mir_apply_cnt_list = [0]
+#rir_apply_cnt_list = [0]
+sr = 16000
+sub_sample_length = 5.072
+max_audio_length = 80
+aligned_prob = 0.5
+include_lead_in_accomp_prob = 0.1
+sample_for_validation_or_test_creation = false
+nr_samples_per_voice_v_augmentation_combination = 5
+snr_range = [6, 20]
+target_dB_FS = -25
+target_dB_FS_floating_value = 10
+
+grvp_max_n_tries_foreground = 5
+grvp_max_n_tries_background = 3
+
+eps = 1e-6
+dry_run=false
+target_task="fsn_aec"
+
+silent_lead_prob = 0.01
+
+[train_dataset.dataloader]
+batch_size = 16
+num_workers = 1             #set to 1! important for buffered dataset
+drop_last = true
+pin_memory = true
+shuffle = true
+
+
+[validation_dataset]
+path = "audio_zen.dataset.parallel_dataset.Dataset"
+
+[validation_dataset.args]
+dataset_dir_list = [
+    "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/LEAKAGE_REMOVAL/LEAKAGE_REMOVAL_2021_7_15/VALIDATION_SET_CONV"
+]
+sr = 16000
+limit = 400
+target_task = "BGMI"

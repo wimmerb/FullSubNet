@@ -1,0 +1,44 @@
+#python inference.py \
+#  -C fullsubnet/inference.toml \
+#  -M /path/to/your/checkpoint_dir/best_model.tar \
+#  -O /path/to/your/enhancement/dir
+
+# run inference with 
+# CUDA_VISIBLE_DEVICES=0 python inference.py -C fullsubnet/inference.toml -M /home/benedikt/thesis/repos/FullSubNet/FullSubNet_TRY_14_06_21_DENOISE/train_16k_buf/checkpoints/best_model.tar -O ~/Experiments/FullSubNet/Denoise_21_06_14/inference
+# CUDA_VISIBLE_DEVICES="" python inference.py -C fullsubnet/inference.toml -M /home/benedikt/Experiments/FullSubNet/Dereverb_21_06_28/train_16k_buf/checkpoints/best_model.tar -O /home/benedikt/Experiments/FullSubNet/Dereverb_21_06_28/inference
+
+
+[acoustics]
+n_fft = 512
+win_length = 512
+sr = 16000
+hop_length = 256
+
+[inferencer]
+path = "inferencer.Inferencer"
+type = "time_domain"
+
+
+[inferencer.args]
+
+[dataset]
+path = "audio_zen.dataset.waveform_dataset_enhancement.WaveformDataset"
+[dataset.args]
+# dataset = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/TROMPA_REHEARSALS/all_recordings.txt"
+# dataset = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/showcase_denoise/showcase_denoise_noisy.txt"
+# dataset = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/showcase_dereverb/showcase_dereverb_noisy.txt"
+dataset = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/showcase_leakage/showcase_leakage.txt"
+
+limit = 300
+offset = 0
+sr = 16000
+sample_for_wave_u_net = false
+
+[model]
+path = "denoise_dtln.dtln_fix.DTLN"
+
+[model.args]
+sample_rate = 16000
+sample_duration = 3.072
+batch_size = 1
+
