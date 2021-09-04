@@ -22,7 +22,7 @@ n_samples = 1
 num_workers = 12 #this nr seems to not have effect on OOM
 
 [model]
-path = "fullsubnet_aec.fsn_full_dual_model.Model"
+path = "leakage_removal.fullsubnet_aec.fsn_full_dual_model.Model"
 
 [model.args]
 sb_num_neighbors = 15
