@@ -6,7 +6,7 @@ keep_reproducibility = false  # see https://pytorch.org/docs/stable/notes/random
 use_amp = false  # use automatic mixed precision, it will benefits Tensor Core-enabled GPU (e.g. Volta, Turing, Ampere). 2-3X speedup。
 
 [trainer]
-path = "fullsubnet_aec.trainer.Trainer"
+path = "leakage_removal.fullsubnet_aec.trainer.Trainer"
 [trainer.train]
 clip_grad_norm_value = 10
 epochs = 9999
