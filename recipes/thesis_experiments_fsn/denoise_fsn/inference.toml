@@ -39,7 +39,7 @@ path = "audio_zen.dataset.waveform_dataset_enhancement.WaveformDataset"
 # dataset = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/TROMPA_REHEARSALS/all_recordings.txt"
 # dataset = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/showcase_denoise/showcase_denoise_noisy.txt"
 # dataset = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/showcase_dereverb/showcase_dereverb_noisy.txt"
-dataset = "/home/benedikt/thesis/TRAIN_EVALUATION_DATA/showcase_leakage/showcase_leakage.txt"
+dataset = "~/singing-quality-enhancement/samples_for_infer/DENOISE_PARALLEL/noisy.txt"
 
 limit = 300
 offset = 0
