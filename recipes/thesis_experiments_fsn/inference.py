@@ -23,6 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("-C", "--configuration", type=str, required=True, help="Config file.")
     parser.add_argument("-M", "--model_checkpoint_path", type=str, required=False, help="The path of the model's checkpoint.")
     parser.add_argument("-O", "--output_dir", type=str, required=False, help="The path for saving enhanced speeches.")
+    parser.add_argument("-I", "--input_file", type=str, required=False, help="The path for input file indicating raw data paths.")
     args = parser.parse_args()
 
     configuration = toml.load(args.configuration)
@@ -35,5 +36,8 @@ if __name__ == "__main__":
     else:
         checkpoint_path = config_replacement["m_flag"]
         output_dir = config_replacement["o_flag"]
+
+    if args.input_file:
+        configuration["dataset"]["args"]["dataset"] = args.input_file
 
     main(configuration, checkpoint_path, output_dir)
